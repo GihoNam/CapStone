@@ -6,8 +6,10 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.nfc.Tag;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.net.URISyntaxException;
@@ -27,17 +29,18 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 
+import static android.content.ContentValues.TAG;
+
 public class RealService extends Service {
     private Thread mainThread;
     public static Intent serviceIntent = null;
     private Socket mSocket;
     public RealService() {
     }
-
+    final JSONObject data = new JSONObject();
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         serviceIntent = intent;
-       final JSONObject data = new JSONObject();
         showToast(getApplication(), "Start Service");
 
 
@@ -50,13 +53,7 @@ public class RealService extends Service {
                     try {
                         mSocket = IO.socket("");
                         mSocket.connect();
-                        try{
-                            data.put("key1",getIP());               //IP를 가져오는 부분
-                            mSocket.emit("event-name",data);
-                        }
-                        catch (JSONException e){
-                            e.printStackTrace();
-                        }
+                        mSocket.on(Socket.EVENT_CONNECT,onConnect);
                         mSocket.on("chat-message",onMessageRecived);
                     }
                        /* Thread.sleep(1000 * 60 * 1); // 1 minute
@@ -103,11 +100,28 @@ public class RealService extends Service {
             mainThread = null;
         }
     }
+    private  Emitter.Listener onConnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            try {
+                data.put("key1", getIP());               //IP를 가져오는 부분
+                mSocket.emit("event-name", data);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
 
     private Emitter.Listener onMessageRecived = new Emitter.Listener() {
         @Override
         public void call(Object... args) {
-            JSONObject receivedData = (JSONObject) args[0];
+            try {
+                JSONObject receivedData = (JSONObject) args[0];
+                Log.d(TAG, receivedData.getString("msg"));
+                Log.d(TAG, receivedData.getString("data"));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     };
 
