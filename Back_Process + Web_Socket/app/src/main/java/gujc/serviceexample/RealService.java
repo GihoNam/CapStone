@@ -117,8 +117,14 @@ public class RealService extends Service {
         public void call(Object... args) {
             try {
                 JSONObject receivedData = (JSONObject) args[0];
+                String msg = receivedData.getString(("msg"));
                 Log.d(TAG, receivedData.getString("msg"));
                 Log.d(TAG, receivedData.getString("data"));
+                if(msg == "1"){
+                    Intent intent = getPackageManager().getLaunchIntentForPackage("com.project.customezxingtest");
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
