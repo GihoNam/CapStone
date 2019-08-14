@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.Application;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.nfc.Tag;
@@ -35,6 +36,7 @@ public class RealService extends Service {
     private Thread mainThread;
     public static Intent serviceIntent = null;
     private Socket mSocket;
+    ComponentName compName = new ComponentName("com.caps.test","com.unity3d.player.UnityPlayerActivity");
     public RealService() {
     }
     final JSONObject data = new JSONObject();
@@ -47,21 +49,18 @@ public class RealService extends Service {
         mainThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                SimpleDateFormat sdf = new SimpleDateFormat("aa hh:mm");
                 boolean run = true;
+                try {
+                    mSocket = IO.socket("http://192.168.1.39:3000");
+                    mSocket.connect();
+                    mSocket.on(Socket.EVENT_CONNECT,onConnect);
+                }
+                catch (URISyntaxException e) {
+                    Log.d(TAG,"Not Connect");
+                    e.printStackTrace();
+                }
                 while (run) {
-                    try {
-                        mSocket = IO.socket("");
-                        mSocket.connect();
-                        mSocket.on(Socket.EVENT_CONNECT,onConnect);
-                        mSocket.on("chat-message",onMessageRecived);
-                    }
-                       /* Thread.sleep(1000 * 60 * 1); // 1 minute
-                        Date date = new Date();
-                        showToast(getApplication(), sdf.format(date));*/
-                       catch (URISyntaxException e) {
-                        e.printStackTrace();
-                    }
+                    mSocket.on("serverMessage",onMessageRecived);
                 }
             }
         });
@@ -103,12 +102,7 @@ public class RealService extends Service {
     private  Emitter.Listener onConnect = new Emitter.Listener() {
         @Override
         public void call(Object... args) {
-            try {
-                data.put("key1", getIP());               //IP를 가져오는 부분
-                mSocket.emit("event-name", data);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+            mSocket.emit("clientMessage", getIP());
         }
     };
 
@@ -117,12 +111,15 @@ public class RealService extends Service {
         public void call(Object... args) {
             try {
                 JSONObject receivedData = (JSONObject) args[0];
-                String msg = receivedData.getString(("msg"));
-                Log.d(TAG, receivedData.getString("msg"));
-                Log.d(TAG, receivedData.getString("data"));
-                if(msg == "1"){
-                    Intent intent = getPackageManager().getLaunchIntentForPackage("com.project.customezxingtest");
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                int msg = receivedData.getInt("data");
+                Log.d(TAG,"MSG"+receivedData.getString("msg"));
+                Log.d(TAG,"DATA"+receivedData.getString("data"));
+                Log.d(TAG,"recive : "+msg);
+                if(msg == 1){
+                    Log.d(TAG,"ON recive");
+                    Intent intent = new Intent(Intent.ACTION_MAIN);
+                    intent.addCategory(Intent.CATEGORY_LAUNCHER);
+                    intent.setComponent(compName);
                     startActivity(intent);
                 }
             } catch (JSONException e) {
